@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>시뮬레이션 점유 현황</title>
     <style>
-        body { font-family: sans-serif; background: #f5f7fa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 2.5rem 2rem; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); width: 380px; text-align: center; }
+        body { font-family: 'Pretendard', -apple-system, sans-serif; background: #f5f7fa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 2.5rem 2rem; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); width: 400px; text-align: center; }
         .badge { padding: 8px 18px; border-radius: 50px; font-weight: bold; display: inline-block; margin-bottom: 20px; font-size: 14px; }
         .free { background: #e3f2fd; color: #1976d2; }
         .busy { background: #fff1f2; color: #e11d48; }
         .user-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
-        .user-item { border: 1px solid #eee; padding: 12px; border-radius: 12px; cursor: pointer; }
+        .user-item { border: 1px solid #eee; padding: 12px; border-radius: 12px; cursor: pointer; transition: 0.2s; }
         .user-item.selected { border: 2px solid #e11d48; background: #fff1f2; color: #e11d48; font-weight: bold; }
         button { width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 16px; cursor: pointer; font-weight: bold; }
         .btn-in { background: #e11d48; color: white; }
         .btn-out { background: #e11d48; color: white; margin-top: 15px; }
-        .time-box { background: #f8fafc; padding: 15px; border-radius: 12px; margin: 15px 0; font-size: 14px; color: #475569; text-align: left; border: 1px solid #f1f5f9; }
-        .timer-val { color: #e11d48; font-weight: bold; font-size: 16px; float: right; }
+        .time-box { background: #f8fafc; padding: 18px; border-radius: 15px; margin: 15px 0; font-size: 14px; color: #475569; text-align: left; border: 1px solid #f1f5f9; line-height: 1.8; }
+        .timer-val { color: #e11d48; font-weight: bold; font-size: 16px; display: block; margin-top: 5px; }
         .warning { color: #f43f5e; font-size: 12px; margin-top: 15px; font-weight: bold; display: block; }
         .hidden { display: none !important; }
     </style>
@@ -26,11 +26,13 @@
 
 <div class="card">
     <div id="statusBadge" class="badge free">✅ 사용 가능</div>
-    <h2 id="statusTitle">현재 비어있음</h2>
+    <h2 id="statusTitle" style="margin-top: 0;">현재 비어있음</h2>
 
     <div id="timeDisplay" class="time-box hidden">
-        <div style="margin-bottom:8px;">📅 접속 시간: <span id="startTimeText" style="font-weight:600;">-</span></div>
-        <div>⏳ 경과 시간: <span id="durationText" class="timer-val">0시간 0분 0초</span></div>
+        <div>📅 <b>접속 시간</b></div>
+        <div id="startTimeText" style="color: #1e293b; margin-bottom: 10px;">-</div>
+        <div>⏳ <b>경과 시간</b></div>
+        <span id="durationText" class="timer-val">0시간 0분 0초</span>
     </div>
 
     <div id="loginArea">
@@ -54,13 +56,14 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, set, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+    // 1. 본인의 Firebase Realtime Database URL로 수정하세요.
     const firebaseConfig = {
-        databaseURL: "https://simapp-a2c75-default-rtdb.asia-southeast1.firebasedatabase.app/"
+        databaseURL: "https://dlwogus2002-default-rtdb.asia-southeast1.firebasedatabase.app"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const dbRef = ref(db, 'simulation/status'); // 경로를 명확히 지정
+    const dbRef = ref(db, 'simulation/status');
 
     let myName = "";
     let interval = null;
@@ -72,7 +75,6 @@
     };
 
     window.connect = () => {
-        // 현재 로컬 시간도 백업용으로 함께 저장
         set(dbRef, { 
             user: myName, 
             active: true, 
@@ -82,7 +84,7 @@
     };
 
     window.disconnect = () => {
-        if(confirm("접속을 종료할까요?")) {
+        if(confirm("정말로 접속을 종료하시겠습니까?")) {
             set(dbRef, { user: "", active: false, startTime: null });
         }
     };
@@ -102,30 +104,39 @@
 
     onValue(dbRef, (snap) => {
         const data = snap.val();
+        const badge = document.getElementById('statusBadge');
+        const title = document.getElementById('statusTitle');
         const timeDisplay = document.getElementById('timeDisplay');
         const loginArea = document.getElementById('loginArea');
         const logoutArea = document.getElementById('logoutArea');
 
         if (data && data.active) {
-            document.getElementById('statusBadge').className = "badge busy";
-            document.getElementById('statusBadge').innerText = "🚨 접속 중";
-            document.getElementById('statusTitle').innerText = data.user + " 님이 사용 중";
+            badge.className = "badge busy";
+            badge.innerText = "🚨 접속 중";
+            title.innerText = data.user + " 님이 사용 중";
             
             loginArea.classList.add('hidden');
             logoutArea.classList.remove('hidden');
             timeDisplay.classList.remove('hidden');
 
-            // 서버 시간(startTime)이 아직 도착 안 했으면 로컬 시간(localStartTime) 사용
             const timeSource = data.startTime || data.localStartTime;
             if (timeSource) {
-                document.getElementById('startTimeText').innerText = new Date(timeSource).toLocaleTimeString();
+                // 날짜 포맷 옵션: 년, 월, 일, 요일, 시, 분, 초 모두 포함
+                const options = { 
+                    year: 'numeric', month: 'long', day: 'numeric', 
+                    weekday: 'short', hour: '2-digit', minute: '2-digit', 
+                    second: '2-digit', hour12: false 
+                };
+                const fullDate = new Date(timeSource).toLocaleString('ko-KR', options);
+                document.getElementById('startTimeText').innerText = fullDate;
+                
                 startTimer(timeSource);
             }
         } else {
             if (interval) clearInterval(interval);
-            document.getElementById('statusBadge').className = "badge free";
-            document.getElementById('statusBadge').innerText = "✅ 사용 가능";
-            document.getElementById('statusTitle').innerText = "현재 비어있음";
+            badge.className = "badge free";
+            badge.innerText = "✅ 사용 가능";
+            title.innerText = "현재 비어있음";
             loginArea.classList.remove('hidden');
             logoutArea.classList.add('hidden');
             timeDisplay.classList.add('hidden');
